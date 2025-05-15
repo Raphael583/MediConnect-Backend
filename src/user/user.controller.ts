@@ -50,6 +50,7 @@ export class UserController {
     }
     return this.userService.deleteOneName(id);
   }
+  
 
   @UseGuards(AuthGuard('jwt'))
   @Put('update/:id')
