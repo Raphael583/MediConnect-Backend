@@ -1,4 +1,4 @@
-import { Document, StringExpressionOperatorReturningBoolean } from "mongoose";
+import { Document} from "mongoose";
 export interface Hospital extends Document{
 
     readonly name:string;

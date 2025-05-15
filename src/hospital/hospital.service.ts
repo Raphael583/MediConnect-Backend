@@ -14,6 +14,17 @@ export class HospitalService {
     async getNames (): Promise <Hospital[]> {
         return await this.hospitalModel.find().exec();
     }
+      async getOneName (id:string): Promise <Hospital | null> {
+        return await this.hospitalModel.findById(id).exec();
+    }
+    async deleteOneName (id:string): Promise <Hospital|null> {
+        return await this.hospitalModel.findOneAndDelete({_id:id}).exec();
+    }
+      async updateOneName (id:string,data:HospitalDTO): Promise <Hospital | null> {
+        console.log('Updating id:',id);
+        console.log('Updated text',data);
+        return await this.hospitalModel.findOneAndUpdate({_id:id},data,{new:true}).exec();
+    }
 
     async createHospital(data:HospitalDTO): Promise <Hospital>{
         const h=new this.hospitalModel(data);

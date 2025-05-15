@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Put,Param, Post, Delete } from '@nestjs/common';
 import { HospitalService } from './hospital.service';
 import { ParseObjectIdPipe } from '@nestjs/mongoose';
 import { create } from 'domain';
@@ -9,8 +9,20 @@ import { Hospital } from './interface/hospital.interface';
 export class HospitalController {
     constructor(private readonly hospitalService:HospitalService){}
     @Get()
-    async getName(): Promise<Hospital[]>{
+    async getNames(): Promise<Hospital[]>{
         return this.hospitalService.getNames();
+    }
+    @Get(':id')
+    async getOneName(@Param('id')id:string): Promise<Hospital | null>{
+        return this.hospitalService.getOneName(id);
+    }
+    @Put(':id')
+    async updateOneName(@Param('id')id:string, @Body() data: HospitalDTO ): Promise<Hospital | null>{
+        return this.hospitalService.updateOneName(id,data);
+    }
+    @Delete(':id')
+    async deleteOneName(@Param('id')id:string ): Promise<Hospital | null>{
+        return this.hospitalService.deleteOneName(id);
     }
 
     @Post()
