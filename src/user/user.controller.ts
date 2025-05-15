@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Param, Get, Body, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Put, Delete, Param, Get, Body, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -43,10 +43,24 @@ export class UserController {
 
                 return this.userService.getPatientsOnly(); // Return only patient users
               }
-            @Delete(':id')
-    async deleteOneName(@Param('id')id:string ): Promise<User| null>{
-        return this.userService.deleteOneName(id);
+           @UseGuards(AuthGuard('jwt'))
+  @Delete('delete/:id')
+  async deletePatient(@Param('id') id: string, @Req() req) {
+    if (req.user.userType !== 'doctor') {
+      throw new ForbiddenException('Only doctors can delete patient records');
     }
+    return this.userService.deleteOneName(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Put('update/:id')
+  async updatePatient(@Param('id') id: string, @Body() data: any, @Req() req) {
+    if (req.user.userType !== 'doctor') {
+      throw new ForbiddenException('Only doctors can update patient records');
+    }
+    return this.userService.updatePatient(id, data);
+  }
+
      @Get()
         async getNames(): Promise<User[]>{
             return this.userService.getNames();

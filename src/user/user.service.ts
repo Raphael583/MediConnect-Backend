@@ -57,8 +57,12 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     return await this.userModel.findOne({ email }).exec();
   }
-  async deleteOneName (id:string): Promise <User|null> {
-          return await this.userModel.findOneAndDelete({_id:id}).exec();
+  async deleteOneName(id: string): Promise<User | null> {
+  return await this.userModel.findOneAndDelete({ _id: id }).exec();
+}
+
+async updatePatient(id: string, data: any): Promise<User | null> {
+  return this.userModel.findByIdAndUpdate(id, data, { new: true }).exec();
 }
 
 async getNames (): Promise <User[]> {
