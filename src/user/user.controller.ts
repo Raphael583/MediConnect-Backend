@@ -33,17 +33,16 @@ export class UserController {
     return loginResponse;
   }
  
-         @UseGuards(AuthGuard('jwt'))
-          @Get('view-patients')
-            async getPatients(@Req() req) {
-                const user = req.user; 
-                if (user.userType !== 'doctor') {
-                    throw new ForbiddenException('Only doctors can view patient details');
-                }
-
-                return this.userService.getPatientsOnly(); // Return only patient users
-              }
-           @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'))
+    @Get('view-patients')
+        async getPatients(@Req() req) {
+          const user = req.user; 
+          if (user.userType !== 'doctor') {
+             throw new ForbiddenException('Only doctors can view patient details');
+         }
+          return this.userService.getPatientsOnly(); 
+       }
+ @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
   async deletePatient(@Param('id') id: string, @Req() req) {
     if (req.user.userType !== 'doctor') {
@@ -61,13 +60,13 @@ export class UserController {
     return this.userService.updatePatient(id, data);
   }
 
-     @Get()
-        async getNames(): Promise<User[]>{
-            return this.userService.getNames();
-        }
-        @Get(':id')
-        async getOneName(@Param('id')id:string): Promise<User | null>{
-            return this.userService.getOneName(id);
-        }
+  @Get()
+    async getNames(): Promise<User[]>{
+      return this.userService.getNames();
+    }
+  @Get(':id')
+    async getOneName(@Param('id')id:string): Promise<User | null>{
+      return this.userService.getOneName(id);
+  }
 }
     
