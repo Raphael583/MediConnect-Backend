@@ -33,7 +33,7 @@ async bookSlot(slotId: string, userId: string): Promise<Slot> {
     throw new BadRequestException('Slot not available or already booked');
   }
 
-  // Check for past date
+  
   const today = moment().startOf('day');
   const slotDate = moment(slot.date, 'YYYY-MM-DD').startOf('day');
 
