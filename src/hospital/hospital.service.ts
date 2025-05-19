@@ -8,7 +8,7 @@ import { HospitalDTO } from './dto/hospital.dto';
 
 @Injectable()
 export class HospitalService {
-  constructor(@InjectModel('Patient_rec') private hospitalModel: Model<Hospital>) {}
+  constructor(@InjectModel('hospital') private hospitalModel: Model<Hospital>) {}
 
 
     async getNames (): Promise <Hospital[]> {

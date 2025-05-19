@@ -17,4 +17,7 @@ export class CreatePatientDto {
     @IsDate()
     @Type(()=>Date)
     dob: Date;
+    
+    hospitalId: string;  
+
     }

@@ -1,8 +1,8 @@
-import * as mongoose from 'mongoose';
+import { Schema } from 'mongoose';
 
-export const HospitalSchema = new mongoose.Schema({
-  name: String,
-  age: Number,
-  disease: String,
-  admitted: Boolean,
+export const HospitalSchema = new Schema({
+  name: { type: String, required: true },          
+  address: { type: String, required: true },       
+  phone: { type: String, required: true },         
+  email: { type: String, required: true },         
 });

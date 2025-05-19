@@ -1,4 +1,4 @@
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export interface User extends Document {
   email: string;
@@ -6,4 +6,6 @@ export interface User extends Document {
   name: string;
   dob: Date;
   userType: 'patient' | 'doctor';
+  hospitalId:Types.ObjectId;
+
 }

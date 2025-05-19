@@ -1,8 +1,7 @@
-export interface HospitalDTO {
-
-    readonly name:string;
-    readonly age:number;
-    readonly disease:string;
-    readonly admitted:boolean;
-
+export class HospitalDTO {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  
 }

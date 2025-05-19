@@ -17,4 +17,6 @@ export class CreateDoctorDto {
   @IsDate()
   @Type(()=>Date)
   dob: Date;
+
+  hospitalId: string; 
 }

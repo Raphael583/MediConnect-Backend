@@ -1,7 +1,5 @@
 import { Body, Controller, Get, Put,Param, Post, Delete } from '@nestjs/common';
 import { HospitalService } from './hospital.service';
-import { ParseObjectIdPipe } from '@nestjs/mongoose';
-import { create } from 'domain';
 import { HospitalDTO } from './dto/hospital.dto';
 import { Hospital } from './interface/hospital.interface';
 

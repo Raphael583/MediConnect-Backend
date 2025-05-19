@@ -1,3 +1,4 @@
+import * as mongoose from 'mongoose';
 import { Schema } from 'mongoose';
 
 export const UserSchema = new Schema({
@@ -6,4 +7,6 @@ export const UserSchema = new Schema({
   name: { type: String, required: true },
   dob: { type: Date, required: true },
   userType: { type: String, enum: ['patient', 'doctor'], required: true },
+  hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'hospital' },
+
 });

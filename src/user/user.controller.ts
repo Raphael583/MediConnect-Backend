@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Delete, Param, Get, Body, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Put, Delete, Param, BadRequestException, Get, Body,Headers, UseGuards,  Req, ForbiddenException,Query, Head } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -12,17 +12,29 @@ import { AuthGuard } from '@nestjs/passport';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  
   @Post('create-doctor')
-  async createDoctor(@Body() createDoctorDto: CreateDoctorDto) {
-    const doctor = await this.userService.createDoctor(createDoctorDto);
+  async createDoctor(
+    @Body() createDoctorDto: CreateDoctorDto,
+    @Headers('hospitalid') hospitalId: string,
+  ) {
+    if (!hospitalId) {
+      throw new BadRequestException('Missing hospitalId in headers');
+    }
+
+    const doctor = await this.userService.createDoctor({ ...createDoctorDto, hospitalId });
     return { message: 'Doctor created successfully', doctor };
   }
-
   
   @Post('create-patient')
-  async createPatient(@Body() createPatientDto: CreatePatientDto) {
-    const patient = await this.userService.createPatient(createPatientDto);
+  async createPatient(
+    @Body() createPatientDto: CreatePatientDto,
+    @Headers('hospitalid') hospitalId: string,
+  ) {
+    if (!hospitalId) {
+      throw new BadRequestException('Missing hospitalId in headers');
+    }
+
+    const patient = await this.userService.createPatient({ ...createPatientDto, hospitalId });
     return { message: 'Patient created successfully', patient };
   }
 
@@ -33,15 +45,18 @@ export class UserController {
     return loginResponse;
   }
  
-  @UseGuards(AuthGuard('jwt'))
-    @Get('view-patients')
-        async getPatients(@Req() req) {
-          const user = req.user; 
-          if (user.userType !== 'doctor') {
-             throw new ForbiddenException('Only doctors can view patient details');
-         }
-          return this.userService.getPatientsOnly(); 
-       }
+ @UseGuards(AuthGuard('jwt'))
+@Get('view-patients')
+async viewHospitalPatients(@Req() req) {
+  const doctor = req.user; 
+  if (doctor.userType !== 'doctor') {
+    throw new ForbiddenException('Only doctors can view this data');
+  }
+  
+ 
+  return this.userService.getHospitalWithPatients(doctor.hospitalId);
+}
+
  @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
   async deletePatient(@Param('id') id: string, @Req() req) {
@@ -61,13 +76,48 @@ export class UserController {
     return this.userService.updatePatient(id, data);
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Get('search')
+  async searchPatients(
+    @Req() req,
+    @Query('name') name?: string,
+    @Query('email') email?: string,
+    @Query('dob') dob?: string,
+  ) {
+    if (req.user.userType !== 'doctor') {
+      throw new ForbiddenException('Only doctors can search patient records');
+    }
+
+    return this.userService.searchPatients(name, email, dob);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+@Get('hospital-info/:hospitalId')
+async getHospitalWithPatients(@Param('hospitalId') hospitalId: string, @Req() req) {
+  console.log('JWT decoded here :',req.user);
+  if (req.user.userType !== 'doctor') {
+    throw new ForbiddenException('Only doctors can access hospital info and patients');
+  }
+
+  return this.userService.getHospitalWithPatients(hospitalId);
+}
+
   @Get()
     async getNames(): Promise<User[]>{
       return this.userService.getNames();
     }
-  @Get(':id')
-    async getOneName(@Param('id')id:string): Promise<User | null>{
-      return this.userService.getOneName(id);
+  @UseGuards(AuthGuard('jwt'))
+@Get(':id')
+async getOneName(@Param('id') id: string, @Req() req) {
+  const doctorHospitalId = req.user.hospitalId;
+  const userType = req.user.userType;
+
+  if (userType !== 'doctor') {
+    throw new ForbiddenException('Only doctors can view patient records');
   }
+
+  return this.userService.getOneName(id, doctorHospitalId);
+}
+
 }
     

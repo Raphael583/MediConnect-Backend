@@ -6,7 +6,7 @@ import { HospitalSchema } from 'src/collection/hospital.schema';
 
 
 @Module({
-  imports:[MongooseModule.forFeature([{ name: 'Patient_rec', schema: HospitalSchema }])],
+  imports:[MongooseModule.forFeature([{ name: 'hospital', schema: HospitalSchema }])],
   controllers: [HospitalController],
   providers: [HospitalService]
 })
