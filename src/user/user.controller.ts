@@ -53,7 +53,7 @@ async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
 
 
  
- @UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'))
 @Get('view-patients')
 async viewHospitalPatients(@Req() req) {
   const doctor = req.user; 

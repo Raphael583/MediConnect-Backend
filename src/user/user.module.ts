@@ -27,7 +27,7 @@ import { ConfigModule } from '@nestjs/config';
   providers: [
     UserService,
     JwtStrategy,
-    redisProvider, // ✅ Provides REDIS_CLIENT
+    redisProvider, 
   ],
   exports: [UserService],
 })
