@@ -1,5 +1,6 @@
 import { Controller, Post, Put, Delete, Param, BadRequestException, Get, Body,Headers, UseGuards,  Req, ForbiddenException,Query, Head } from '@nestjs/common';
 import { UserService } from './user.service';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { LoginDto } from './dto/login.dto';
@@ -44,6 +45,13 @@ export class UserController {
     const loginResponse = await this.userService.login(loginDto);
     return loginResponse;
   }
+  @Post('verify-otp')
+async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+  const { email, otp } = verifyOtpDto;
+  return this.userService.verifyOtp(email, otp);
+}
+
+
  
  @UseGuards(AuthGuard('jwt'))
 @Get('view-patients')

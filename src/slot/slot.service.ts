@@ -23,7 +23,7 @@ export class SlotService {
 
   return await this.slotModel.insertMany(slots) as Slot[];
 }
-
+n
 async bookSlot(slotId: string, userId: string): Promise<Slot> {
   const slot = await this.slotModel.findOne({ _id: slotId, status: 'available' });
 

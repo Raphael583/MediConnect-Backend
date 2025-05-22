@@ -7,20 +7,28 @@ import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
+import { redisProvider } from 'src/redis.provider';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports:[
-  MongooseModule.forFeature([{ name: 'User', schema: UserSchema },
-    { name: 'hospital', schema: HospitalSchema },
-  ]),
-  PassportModule.register({ defaultStrategy: 'jwt' }),
-  JwtModule.register({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // ✅ Must be present to use .env
+    MongooseModule.forFeature([
+      { name: 'User', schema: UserSchema },
+      { name: 'hospital', schema: HospitalSchema },
+    ]),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.register({
       secret: 'object583',
       signOptions: { expiresIn: '1h' },
     }),
   ],
-
   controllers: [UserController],
-  providers: [UserService, JwtStrategy]
+  providers: [
+    UserService,
+    JwtStrategy,
+    redisProvider, // ✅ Provides REDIS_CLIENT
+  ],
+  exports: [UserService],
 })
 export class UserModule {}

@@ -1,12 +1,14 @@
-import { Injectable , NotFoundException, ForbiddenException, UnauthorizedException} from '@nestjs/common';
+import { Injectable , Inject, NotFoundException, ForbiddenException, UnauthorizedException} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Hospital } from 'src/hospital/interface/hospital.interface';
 import { User } from './interfaces/user.interface';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { CreateDoctorDto } from './dto/create-doctor.dto';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { Redis } from '@upstash/redis';
 
 @Injectable()
 export class UserService {
@@ -14,8 +16,8 @@ export class UserService {
     @InjectModel('User') private readonly userModel: Model<User>,
     @InjectModel('hospital') private readonly hospitalModel:Model<Hospital>,
     private readonly jwtService: JwtService,
+    @Inject('REDIS_CLIENT') private readonly redis: any,
   ) {}
-
   
   async createDoctor(createDoctorDto: CreateDoctorDto): Promise<User> {
     const { email, password, name, dob, hospitalId } = createDoctorDto;
@@ -29,33 +31,78 @@ export class UserService {
     const newPatient = new this.userModel({email,password, name,dob,hospitalId, userType: 'patient'});
     return await newPatient.save();
   }
+async login(loginDto: LoginDto): Promise<any> {
+  const { email, password } = loginDto;
+  const user = await this.userModel.findOne({ email });
 
-  
-  async login(loginDto: LoginDto): Promise<any> {
-    const { email, password } = loginDto;
-    const user = await this.userModel.findOne({ email });
+   if (!user) throw new NotFoundException('User not found');
+    if (user.password !== password) throw new UnauthorizedException('Invalid credentials');
 
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+  // Generate OTP (6-digit)
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const redisKey = `otp:${email}`;
 
-    if (user.password !== password) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+   await this.redis.set(redisKey, otp, { ex: 120 });
 
-    const payload = { email: user.email, userType: user.userType, hospitalId:user.hospitalId };
-    const token = this.jwtService.sign(payload);
+    console.log(`OTP for ${email}: ${otp}`);
 
-    return {
-      access_token: token,
-      user: {email: user.email,name: user.name,userType: user.userType, hospitalId: user.hospitalId, password: this.maskPassword(user.password)}
-    };
+
+  return {
+    message: 'OTP sent to your email (check server logs for now)',
+    email: email,
+  };
+}
+async verifyOtp(email: string, otp: string): Promise<any> {
+  // Normalize inputs
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedOtp = otp.trim();
+
+  const redisKey = `otp:${normalizedEmail}`;
+  const storedOtp = await this.redis.get(redisKey);
+
+  console.log(`Stored OTP: ${storedOtp}, Provided OTP: ${normalizedOtp}`);
+
+  if (!storedOtp) {
+    throw new UnauthorizedException('OTP expired or not found');
   }
 
-  maskPassword(password: string): string {
-    return password.replace(/./g, '*');  
+  if (String(storedOtp) !== String(normalizedOtp)) {
+    throw new UnauthorizedException('Invalid OTP');
   }
-  
+
+  // OTP matched, delete it
+  await this.redis.del(redisKey);
+
+  // Find user with case-insensitive email
+  const user = await this.userModel.findOne({
+    email: new RegExp(`^${normalizedEmail}$`, 'i'),
+  });
+
+  console.log('User fetched after OTP verification:', user);
+
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+
+  // Create JWT token
+  const payload = {
+    email: user.email,
+    userType: user.userType,
+    hospitalId: user.hospitalId,
+  };
+
+  const token = this.jwtService.sign(payload);
+
+  return {
+    access_token: token,
+    user: {
+      email: user.email,
+      name: user.name,
+      userType: user.userType,
+      hospitalId: user.hospitalId,
+    },
+  };
+}
 
   async findByEmail(email: string): Promise<User | null> {
     return await this.userModel.findOne({ email }).exec();
