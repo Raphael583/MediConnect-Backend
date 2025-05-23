@@ -9,4 +9,6 @@ export const UserSchema = new Schema({
   userType: { type: String, enum: ['patient', 'doctor'], required: true },
   hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'hospital' },
 
+   isBlocked: { type: Boolean, default: false },
+
 });

@@ -7,5 +7,7 @@ export interface User extends Document {
   dob: Date;
   userType: 'patient' | 'doctor';
   hospitalId:Types.ObjectId;
+  
+  isBlocked: boolean;
 
 }

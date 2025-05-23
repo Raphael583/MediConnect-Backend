@@ -1,4 +1,4 @@
-import { Injectable , Inject, NotFoundException, ForbiddenException, UnauthorizedException} from '@nestjs/common';
+import { Injectable , Inject, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Hospital } from 'src/hospital/interface/hospital.interface';
@@ -25,7 +25,6 @@ export class UserService {
     return await newDoctor.save();
   }
 
-  
   async createPatient(createPatientDto: CreatePatientDto): Promise<User> {
     const { email, password, name, dob, hospitalId } = createPatientDto;
     const newPatient = new this.userModel({email,password, name,dob,hospitalId, userType: 'patient'});
@@ -33,25 +32,60 @@ export class UserService {
   }
 async login(loginDto: LoginDto): Promise<any> {
   const { email, password } = loginDto;
+
   const user = await this.userModel.findOne({ email });
 
-   if (!user) throw new NotFoundException('User not found');
-    if (user.password !== password) throw new UnauthorizedException('Invalid credentials');
+  if (!user) throw new NotFoundException('User not found');
 
-  // Generate OTP (6-digit)
+  //  Check if the account is blocked
+  if (user.isBlocked) {
+    throw new ForbiddenException('Your account has been blocked due to multiple failed login attempts.');
+  }
+
+  const redisKey = `failed-login:${email}`;
+  const maxAttempts = 6;
+
+  //  Wrong password
+  if (user.password !== password) {
+    const failedAttempts = await this.redis.incr(redisKey);
+
+    // Set expiry for Redis key (optional, e.g. 5 minutes)
+    if (failedAttempts === 1) {
+      await this.redis.expire(redisKey, 300); // 5 mins
+    }
+
+    const remaining = maxAttempts - failedAttempts;
+
+    if (remaining <= 0) {
+      //  Block the account
+      user.isBlocked = true;
+      await user.save();
+
+      // Clear Redis key
+      await this.redis.del(redisKey);
+
+      throw new ForbiddenException('Your account has been blocked due to multiple failed login attempts.');
+    }
+
+    throw new UnauthorizedException(`Invalid credentials. You have ${remaining} attempt(s) left before your account gets blocked.`);
+  }
+
+  //  Successful login — reset failed attempt counter
+  await this.redis.del(redisKey);
+
+  //  Generate OTP (6-digit)
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const redisKey = `otp:${email}`;
+  const otpKey = `otp:${email}`;
+  await this.redis.set(otpKey, otp, { ex: 120 }); // 2 minutes
 
-   await this.redis.set(redisKey, otp, { ex: 120 });
-
-    console.log(`OTP for ${email}: ${otp}`);
-
+  console.log(`OTP for ${email}: ${otp}`);
 
   return {
     message: 'OTP sent to your email (check server logs for now)',
-    email: email,
+    email,
   };
 }
+
 async verifyOtp(email: string, otp: string): Promise<any> {
   // Normalize inputs
   const normalizedEmail = email.trim().toLowerCase();
@@ -103,6 +137,43 @@ async verifyOtp(email: string, otp: string): Promise<any> {
     },
   };
 }
+async unblockUserByField(type: string, value: string, currentUser: any): Promise<any> {
+  if (currentUser.userType !== 'doctor') {
+    throw new ForbiddenException('Only doctors can unblock users');
+  }
+
+  let query: any = {};
+
+  switch (type) {
+    case 'id':
+      query._id = value;
+      break;
+    case 'email':
+      query.email = new RegExp(`^${value}$`, 'i');
+      break;
+    case 'name':
+      query.name = new RegExp(`^${value}$`, 'i');
+      break;
+    default:
+      throw new BadRequestException('Invalid type. Must be id, email, or name.');
+  }
+
+  const user = await this.userModel.findOne(query);
+
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+
+  if (!user.isBlocked) {
+    return { message: 'User is already unblocked' };
+  }
+
+  user.isBlocked = false;
+  await user.save();
+
+  return { message: `User (${user.email}) has been unblocked successfully` };
+}
+
 
   async findByEmail(email: string): Promise<User | null> {
     return await this.userModel.findOne({ email }).exec();

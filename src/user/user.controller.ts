@@ -39,7 +39,6 @@ export class UserController {
     return { message: 'Patient created successfully', patient };
   }
 
-  
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     const loginResponse = await this.userService.login(loginDto);
@@ -50,9 +49,16 @@ async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
   const { email, otp } = verifyOtpDto;
   return this.userService.verifyOtp(email, otp);
 }
+@UseGuards(AuthGuard('jwt'))
+@Put('unblock')
+async unblockUser(
+  @Req() req,
+  @Body('type') type: string,
+  @Body('value') value: string
+) {
+  return this.userService.unblockUserByField(type, value, req.user);
+}
 
-
- 
 @UseGuards(AuthGuard('jwt'))
 @Get('view-patients')
 async viewHospitalPatients(@Req() req) {
