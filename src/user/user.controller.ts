@@ -7,8 +7,6 @@ import { LoginDto } from './dto/login.dto';
 import { User } from './interfaces/user.interface';
 import { AuthGuard } from '@nestjs/passport';
 
-
-
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -21,7 +19,6 @@ export class UserController {
     if (!hospitalId) {
       throw new BadRequestException('Missing hospitalId in headers');
     }
-
     const doctor = await this.userService.createDoctor({ ...createDoctorDto, hospitalId });
     return { message: 'Doctor created successfully', doctor };
   }
@@ -66,8 +63,6 @@ async viewHospitalPatients(@Req() req) {
   if (doctor.userType !== 'doctor') {
     throw new ForbiddenException('Only doctors can view this data');
   }
-  
- 
   return this.userService.getHospitalWithPatients(doctor.hospitalId);
 }
 
@@ -80,7 +75,6 @@ async viewHospitalPatients(@Req() req) {
     return this.userService.deleteOneName(id);
   }
   
-
   @UseGuards(AuthGuard('jwt'))
   @Put('update/:id')
   async updatePatient(@Param('id') id: string, @Body() data: any, @Req() req) {
@@ -105,7 +99,7 @@ async viewHospitalPatients(@Req() req) {
     return this.userService.searchPatients(name, email, dob);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'))
 @Get('hospital-info/:hospitalId')
 async getHospitalWithPatients(@Param('hospitalId') hospitalId: string, @Req() req) {
   console.log('JWT decoded here :',req.user);
