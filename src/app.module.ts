@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './user/user.module';
 import { SlotModule } from './slot/slot.module';
 import { redisProvider } from './redis.provider';
+import { PatientsModule } from './patients/patients.module';
 
 
 
@@ -17,6 +18,7 @@ import { redisProvider } from './redis.provider';
     HospitalModule,
     UserModule,
     SlotModule,
+    PatientsModule,
   ],
   controllers: [AppController],
   providers: [AppService, redisProvider],

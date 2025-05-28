@@ -52,7 +52,7 @@
     }
 
     const redisKey = `failed-login:${email}`;
-    const maxAttempts = 6;
+    const maxAttempts = 4;
 
     //  Wrong password
     if (user.password !== password) {
@@ -109,14 +109,6 @@
   };
 }
 
-    //console.log(`OTP for ${email}: ${otp}`);
-
-    //return {
-     // message: 'OTP sent to your email (check server logs for now)',
-      //email,
-    //};
-  //}
-
   async verifyOtp(email: string, otp: string): Promise<any> {
     // Normalize inputs
     const normalizedEmail = email.trim().toLowerCase();
@@ -125,7 +117,7 @@
     const redisKey = `otp:${normalizedEmail}`;
     const storedOtp = await this.redis.get(redisKey);
 
-    console.log(`Stored OTP: ${storedOtp}, Provided OTP: ${normalizedOtp}`);
+    //console.log(`Stored OTP: ${storedOtp}, Provided OTP: ${normalizedOtp}`);
 
     if (!storedOtp) {
       throw new UnauthorizedException('OTP expired or not found');
@@ -143,7 +135,7 @@
       email: new RegExp(`^${normalizedEmail}$`, 'i'),
     });
 
-    console.log('User fetched after OTP verification:', user);
+    //console.log('User fetched after OTP verification:', user);
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -246,7 +238,7 @@
   async getNames (): Promise <User[]> {
           return await this.userModel.find({},{password:0}).exec();
       }
-        async getOneName(id: string, doctorHospitalId: string): Promise<User | null> {
+  async getOneName(id: string, doctorHospitalId: string): Promise<User | null> {
     const patient = await this.userModel.findById(id, { password: 0 }).exec();
 
     if (!patient) {

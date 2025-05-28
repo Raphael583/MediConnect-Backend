@@ -66,6 +66,7 @@ async viewHospitalPatients(@Req() req) {
   return this.userService.getHospitalWithPatients(doctor.hospitalId);
 }
 
+
  @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
   async deletePatient(@Param('id') id: string, @Req() req) {
