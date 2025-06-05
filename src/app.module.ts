@@ -8,8 +8,10 @@ import { UserModule } from './user/user.module';
 import { SlotModule } from './slot/slot.module';
 import { redisProvider } from './redis.provider';
 import { PatientsModule } from './patients/patients.module';
-
-
+import { RedisModule } from './redis.module';
+import { RazorpayService } from './razorpay/razorpay.service';
+import { RazorpayController } from './razorpay/razorpay.controller';
+import { RazorpayModule } from './razorpay/razorpay.module';
 
 @Module({
   imports: [
@@ -19,8 +21,10 @@ import { PatientsModule } from './patients/patients.module';
     UserModule,
     SlotModule,
     PatientsModule,
+    RedisModule,
+    RazorpayModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, redisProvider],
+  controllers: [AppController, RazorpayController],
+  providers: [AppService, redisProvider, RazorpayService],
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 import { Module, Global } from '@nestjs/common';
-import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
+import { Redis } from '@upstash/redis';
 
 @Global()
 @Module({
@@ -8,17 +8,12 @@ import { ConfigService } from '@nestjs/config';
     {
       provide: 'REDIS_CLIENT',
       useFactory: (configService: ConfigService) => {
-        const redisUrl = configService.get<string>('UPSTASH_REDIS_REST_URL');
-        const redisToken = configService.get<string>('UPSTASH_REDIS_REST_TOKEN');
-
-        if (!redisUrl || !redisToken) {
+        const url = configService.get<string>('UPSTASH_REDIS_REST_URL');
+        const token = configService.get<string>('UPSTASH_REDIS_REST_TOKEN');
+        if (!url || !token) {
           throw new Error('Missing Redis configuration in .env');
         }
-
-        return new Redis(redisUrl, {
-          password: redisToken,
-          tls: {}, // Upstash requires TLS
-        });
+        return new Redis({ url, token });
       },
       inject: [ConfigService],
     },

@@ -1,4 +1,3 @@
-
 import { Schema } from 'mongoose';
 
 export const PatientSchema = new Schema(
@@ -24,8 +23,14 @@ export const PatientSchema = new Schema(
       required: [true, 'Identifier is required'],
       unique: true,
     },
+    isActivated: {
+      type: Boolean,
+      default: false,
+    },
+      dob: { type: Date, required: false },
+    
   },
   {
-    timestamps: true, // adds createdAt and updatedAt
+    timestamps: true,
   }
 );

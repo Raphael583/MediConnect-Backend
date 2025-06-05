@@ -12,6 +12,9 @@ export class SlotService {
      constructor(
     @InjectModel('Slot') private readonly slotModel: Model<Slot>,
   ) {}
+    private getToday(): string {
+    return moment().format('YYYY-MM-DD');
+  }
 
  async createMultipleSlots(doctorId: string, dtos: CreateSlotDto[]): Promise<Slot[]> {
   const slots = dtos.map(dto => ({
@@ -91,7 +94,69 @@ async cancelSlot(slotId: string, userId: string): Promise<Slot> {
   return await slot.save();
 }
 
+  async getTodaysAppointmentsForDoctor(doctorId: string) {
+    const today = this.getToday();
+    const slots = await this.slotModel.find({ doctorId, date: today, status: 'booked' });
+    if (slots.length === 0) {
+      return { message: 'No appointments for today' };
+    }
+    return slots;
+  }
+
+  async getUpcomingAppointmentsForDoctor(doctorId: string) {
+    const today = this.getToday();
+    const slots = await this.slotModel.find({
+      doctorId,
+      date: { $gt: today },
+      status: 'booked'
+    });
+    if (slots.length === 0) {
+      return { message: 'No upcoming appointments found' };
+    }
+    return slots;
+  }
+
+  async getTodaysAppointmentsForPatient(userId: string) {
+    const today = this.getToday();
+    const slots = await this.slotModel.find({ userId, date: today, status: 'booked' });
+    if (slots.length === 0) {
+      return { message: 'You have no appointments today' };
+    }
+    return slots;
+  }
+
+  async getUpcomingAppointmentsForPatient(userId: string) {
+    const today = this.getToday();
+    const slots = await this.slotModel.find({
+      userId,
+      date: { $gt: today },
+      status: 'booked'
+    });
+    if (slots.length === 0) {
+      return { message: 'You have no upcoming appointments' };
+    }
+    return slots;
+  }
+
+  async validateSlotForBooking(slotId: string, userId: string) {
+  const slot = await this.slotModel.findOne({ _id: slotId, status: 'available' });
+  if (!slot) return null;
+
+  const existing = await this.slotModel.findOne({
+    userId,
+    doctorId: slot.doctorId,
+    date: slot.date,
+    status: 'booked',
+  });
+
+  if (existing) return null;
+
+  return slot;
 }
+
+}
+
+
 
 
 

@@ -7,8 +7,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     this.redis = new Redis({
-      url: 'https://golden-halibut-38616.upstash.io',
-      token: 'AZbYAAIjcDFkM2RjYWMyYzk1MjE0YjdjYTFkNjE3YmM1NDQ2MmQzMXAxMA',
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
     });
   }
 

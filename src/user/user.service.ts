@@ -10,6 +10,7 @@
   import { JwtService } from '@nestjs/jwt';
   import { Redis } from '@upstash/redis';
   import * as nodemailer from 'nodemailer';
+  import {JwtPayload} from 'jsonwebtoken';
 
   @Injectable()
   export class UserService {
@@ -40,72 +41,66 @@
       return await newPatient.save();
     }
   async login(loginDto: LoginDto): Promise<any> {
-    const { email, password } = loginDto;
+  const { email, password } = loginDto;
 
-    const user = await this.userModel.findOne({ email });
+  const user = await this.userModel.findOne({ email });
 
-    if (!user) throw new NotFoundException('User not found');
+  if (!user) throw new NotFoundException('User not found');
 
-    //  Check if the account is blocked
-    if (user.isBlocked) {
+  // Check if the account is blocked
+  if (user.isBlocked) {
+    throw new ForbiddenException('Your account has been blocked due to multiple failed login attempts.');
+  }
+
+  const redisKey = `failed-login:${email}`;
+  const maxAttempts = 4;
+
+  // Wrong password
+  if (user.password !== password) {
+    const failedAttempts = await this.redis.incr(redisKey);
+
+    // Set expiry for Redis key
+    if (failedAttempts === 1) {
+      await this.redis.expire(redisKey, 180); // 3 minutes
+    }
+
+    const remaining = maxAttempts - failedAttempts;
+
+    if (remaining <= 0) {
+      // Block the account
+      user.isBlocked = true;
+      await user.save();
+
+      // Clear Redis key
+      await this.redis.del(redisKey);
+
       throw new ForbiddenException('Your account has been blocked due to multiple failed login attempts.');
     }
 
-    const redisKey = `failed-login:${email}`;
-    const maxAttempts = 4;
-
-    //  Wrong password
-    if (user.password !== password) {
-      const failedAttempts = await this.redis.incr(redisKey);
-
-      // Set expiry for Redis key 
-      if (failedAttempts === 1) {
-        await this.redis.expire(redisKey, 180); // 3 mins
-      }
-
-      const remaining = maxAttempts - failedAttempts;
-
-      if (remaining <= 0) {
-        //  Block the account
-        user.isBlocked = true;
-        await user.save();
-
-        // Clear Redis key
-        await this.redis.del(redisKey);
-
-        throw new ForbiddenException('Your account has been blocked due to multiple failed login attempts.');
-      }
-
-      throw new UnauthorizedException(`Invalid credentials. You have ${remaining} attempt(s) left before your account gets blocked.`);
-    }
-
-    //  Successful login — reset failed attempt counter
-    await this.redis.del(redisKey);
-
-    //  Generate OTP (6-digit)
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpKey = `otp:${email}`;
-    await this.redis.set(otpKey, otp, { ex: 120 }); // 2 minutes
-
-    
-  // Send OTP email
-  const mailOptions = {
-    from: `" Hospital Authentication" <${process.env.GMAIL_USER}>`,
-    to: email,
-    subject: 'Your OTP for Login',
-    text: `Your OTP is: ${otp}. It is valid for 2 minutes. Don't share it with anyone.`,
-  };
-
-  try {
-    await this.transporter.sendMail(mailOptions);
-  } catch (error) {
-    console.error('Error sending OTP email:', error);
-    throw new Error('Failed to send OTP email');
+    throw new UnauthorizedException(`Invalid credentials. You have ${remaining} attempt(s) left before your account gets blocked.`);
   }
 
+  // Successful login — reset failed attempt counter
+  await this.redis.del(redisKey);
+
+  // Generate JWT token
+  const payload = {
+    email: user.email,
+    userType: user.userType,
+    hospitalId: user.hospitalId,
+  };
+
+  const token = this.jwtService.sign(payload);
+
   return {
-    message: 'OTP sent to your email.',
-    email,
+    access_token: token,
+  /*  user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      userType: user.userType,
+      hospitalId: user.hospitalId,
+    },*/
   };
 }
 
@@ -135,8 +130,6 @@
       email: new RegExp(`^${normalizedEmail}$`, 'i'),
     });
 
-    //console.log('User fetched after OTP verification:', user);
-
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -160,6 +153,77 @@
       },
     };
   }
+
+
+
+  async handleUnauthorizedAccess(attemptsKey: string, email: string): Promise<'warned' | 'blocked' | number> {
+  const attempts = await this.redis.incr(attemptsKey);
+
+  if (attempts === 1) {
+    await this.redis.expire(attemptsKey, 180); // 3 mins
+    await this.transporter.sendMail({
+      
+      from: `"Do Not Reply" <${process.env.GMAIL_USER}>`,
+      replyTo: 'no-reply@yourdomain.com',
+      to: email,
+      subject: ' Warning: Unauthorized Access Attempt',
+      text: `You attempted to access restricted hospital data. One more attempt will block your account.`,
+    });
+    return 'warned';
+  }
+
+  if (attempts >= 2) {
+    await this.userModel.updateOne({ email }, { isBlocked: true });
+    await this.redis.del(attemptsKey);
+
+    await this.transporter.sendMail({
+       from: `"Do Not Reply" <${process.env.GMAIL_USER}>`,
+      replyTo: 'no-reply@yourdomain.com',
+      to: email,
+      subject: 'Account Blocked',
+      text: `Your account has been blocked due to repeated unauthorized access attempts.`,
+    });
+
+    return 'blocked';
+  }
+
+  return attempts;
+}
+
+
+ async createUserFromPatient(
+  token: string,
+  createUserDto: { password: string; dob?: string;  },
+  hospitalId: string,
+): Promise<User> {
+  let payload: any;
+  try {
+    payload = this.jwtService.verify(token);
+  } catch (err) {
+    throw new BadRequestException('Invalid or expired token');
+  }
+
+  const email = payload.email;
+
+  const existingUser = await this.userModel.findOne({ email });
+  if (existingUser) {
+    throw new BadRequestException('User already exists');
+  }
+
+  const newUser = new this.userModel({
+    email,
+    name: payload.name || '',
+    mobile: payload.mobile || '',
+    userType: 'patient',        
+    hospitalId: hospitalId,
+    password: createUserDto.password,
+    dob: createUserDto.dob || '',
+  });
+
+  return await newUser.save();
+}
+
+  
   async unblockUserByField(type: string, value: string, currentUser: any): Promise<any> {
     if (currentUser.userType !== 'doctor') {
       throw new ForbiddenException('Only doctors can unblock users');

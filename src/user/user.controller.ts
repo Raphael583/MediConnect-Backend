@@ -6,6 +6,8 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { LoginDto } from './dto/login.dto';
 import { User } from './interfaces/user.interface';
 import { AuthGuard } from '@nestjs/passport';
+import { ValidationPipe, UsePipes } from '@nestjs/common';
+import { CreateUserFromPatientDto } from './dto/create-user-from-paitent.dto';
 
 @Controller('user')
 export class UserController {
@@ -55,8 +57,30 @@ async unblockUser(
 ) {
   return this.userService.unblockUserByField(type, value, req.user);
 }
+@Post('join-user')
+@UsePipes(new ValidationPipe({ whitelist: true }))
+async createUserFromPatient(
+  @Body() createUserDto: CreateUserFromPatientDto, // should have email, password, dob
+  @Headers('authorization') authorization: string,
+  @Headers('hospitalid') hospitalId: string,
+) {
+  if (!authorization) {
+    throw new BadRequestException('Authorization header missing');
+  }
+  if (!hospitalId) {
+    throw new BadRequestException('Missing hospitalId in headers');
+  }
 
-@UseGuards(AuthGuard('jwt'))
+  const token = authorization.replace('Bearer ', '');
+
+  return await this.userService.createUserFromPatient(
+    token,
+    createUserDto,
+    hospitalId,
+  );
+}
+
+/*@UseGuards(AuthGuard('jwt'))
 @Get('view-patients')
 async viewHospitalPatients(@Req() req) {
   const doctor = req.user; 
@@ -64,7 +88,28 @@ async viewHospitalPatients(@Req() req) {
     throw new ForbiddenException('Only doctors can view this data');
   }
   return this.userService.getHospitalWithPatients(doctor.hospitalId);
+}*/
+
+@UseGuards(AuthGuard('jwt'))
+@Get('view-patients')
+async viewHospitalPatients(@Req() req) {
+  const currentUser = req.user;
+
+  if (currentUser.userType === 'doctor') {
+    return this.userService.getHospitalWithPatients(currentUser.hospitalId);
+  }
+
+  // Handle unauthorized access for patients or others
+  const attemptsKey = `unauthorized-access:${currentUser.email}`;
+  const attempts = await this.userService.handleUnauthorizedAccess(attemptsKey, currentUser.email);
+
+  if (attempts === 'blocked') {
+    throw new ForbiddenException('Your account has been blocked due to repeated unauthorized access.');
+  }
+
+  throw new ForbiddenException('Unauthorized access');
 }
+
 
 
  @UseGuards(AuthGuard('jwt'))

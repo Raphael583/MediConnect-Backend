@@ -6,4 +6,5 @@ export interface Patient extends Document {
   mobile: string;
   email: string;
   identifier: string;
+  isActivated:boolean;
 }

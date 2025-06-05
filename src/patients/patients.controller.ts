@@ -1,5 +1,4 @@
-
-import {Controller,Post,UploadedFile,UseInterceptors,HttpException,HttpStatus} from '@nestjs/common';
+import {Controller,Post,UploadedFile,UseInterceptors,HttpException,HttpStatus,Body,BadRequestException} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PatientsService } from './patients.service';
 import * as csv from 'csv-parser';
@@ -21,7 +20,7 @@ export class PatientController {
     }
 
     const patients: CreateCsvPatientDto[] = [];
-    const invalidRows: { row: any; errors: string[] }[] = []; // 
+    const invalidRows: { row: any; errors: string[] }[] = [];
 
     const stream = Readable.from(file.buffer);
     const parser = stream.pipe(csv());
@@ -32,21 +31,20 @@ export class PatientController {
 
       if (errors.length === 0) {
         patients.push(dto);
-      }
-      else {
-        // Collect validation error messages for the row
+      } else {
         const messages = errors
           .map(err => Object.values(err.constraints ?? {}).join(', '))
           .flat();
         invalidRows.push({ row, errors: messages });
       }
     }
+
     try {
       const saved = await this.patientService.csvCreate(patients);
       return {
         message: `${saved.length} patients uploaded successfully`,
         data: saved,
-        invalidRows
+        invalidRows,
       };
     } catch (error) {
       throw new HttpException(
@@ -54,5 +52,26 @@ export class PatientController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  @Post('activate/send-otp')
+  async sendOtp(@Body('identifier') identifier: string) {
+    if (!identifier) {
+      throw new BadRequestException('Identifier is required');
+    }
+
+    return await this.patientService.sendActivationOtp(identifier);
+  }
+
+  @Post('activate/verify-otp')
+  async verifyOtp(
+    @Body('identifier') identifier: string,
+    @Body('otp') otp: string,
+  ) {
+    if (!identifier || !otp) {
+      throw new BadRequestException('Identifier and OTP are required');
+    }
+
+    return await this.patientService.verifyActivationOtp(identifier, otp);
   }
 }
