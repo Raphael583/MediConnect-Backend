@@ -26,6 +26,27 @@ export class RazorpayController {
       throw new BadRequestException(err.message || 'Failed to create Razorpay order');
     }
   }
+  @Post('mock-order')
+async createMockOrder(@Body() body: { amount: number }) {
+  const { amount } = body;
+
+  if (!amount || isNaN(amount)) {
+    throw new BadRequestException('Amount must be a valid number');
+  }
+
+  try {
+    const order = await this.razorpayService.mockcreateOrder(amount);
+    return {
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+    };
+  } catch (err) {
+    throw new BadRequestException(err.message || 'Failed to create mock Razorpay order');
+  }
+}
+
    @Post('verify')
   verifyPayment(@Body() body: {
     razorpay_order_id: string;

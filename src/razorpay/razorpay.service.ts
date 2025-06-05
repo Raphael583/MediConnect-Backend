@@ -83,4 +83,14 @@ export class RazorpayService {
       throw new InternalServerErrorException('Failed to verify Razorpay credentials');
     }
   }
+  async mockcreateOrder(amount: number, currency = 'INR') {
+  return {
+    id: `order_${Date.now()}`,
+    amount: amount * 100,
+    currency,
+    receipt: `receipt_order_${Date.now()}`,
+    status: 'created',
+  };
+}
+
 }
