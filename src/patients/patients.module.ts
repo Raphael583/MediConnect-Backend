@@ -19,7 +19,8 @@ import { RedisModule } from 'src/redis.module';
         RedisModule,
   ],
   controllers: [PatientController],
-  providers: [PatientsService]
+  providers: [PatientsService],
+  exports: [PatientsService],
 })
 export class PatientsModule {}
 

@@ -1,8 +1,8 @@
 export interface Slot {
-  date: string;               
-  startTime: string;          
-  endTime: string;  
-  doctorId: string,          
+  _id?: string;
+  date: Date;               
+  doctorId: string;
   status: 'available' | 'booked';
   userId?: string | null;
+  called?: boolean;
 }

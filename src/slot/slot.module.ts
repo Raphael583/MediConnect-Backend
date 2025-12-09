@@ -11,6 +11,7 @@ import { RazorpayModule } from 'src/razorpay/razorpay.module';
     RazorpayModule,
   ], 
   controllers: [SlotController],
-  providers: [SlotService]
+  providers: [SlotService],
+  exports:[SlotService],
 })
 export class SlotModule {}

@@ -124,4 +124,8 @@ if (patient.isActivated) {
       
     };
   }
+  async findById(id: string): Promise<Patient | null> {
+  return this.patientModel.findById(id).exec();
+}
+
 }
