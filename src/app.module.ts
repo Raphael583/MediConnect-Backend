@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -14,9 +16,13 @@ import { RazorpayService } from './razorpay/razorpay.service';
 import { RazorpayController } from './razorpay/razorpay.controller';
 import { RazorpayModule } from './razorpay/razorpay.module';
 import { TwilioModule } from './twilio/twilio.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+    }),
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     MongooseModule.forRoot('mongodb://localhost/hospital-db'),
@@ -27,6 +33,7 @@ import { TwilioModule } from './twilio/twilio.module';
     RedisModule,
     RazorpayModule,
     TwilioModule,
+    NotificationsModule,
   ],
   controllers: [AppController, RazorpayController],
   providers: [AppService, redisProvider, RazorpayService],

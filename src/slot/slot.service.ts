@@ -1,14 +1,22 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import {User} from '../user/interfaces/user.interface';
+import { Patient } from '../patients/interfaces/patient.interface';
+
 import { Model } from 'mongoose';
 import { CreateSlotDto } from './dto/slot.dto';
 import { Slot } from './interfaces/slot.interface';
+import { NotificationsGateway } from 'src/notifications/notifications.gateway';
 import * as moment from 'moment-timezone';
 
 @Injectable()
 export class SlotService {
   constructor(
     @InjectModel('Slot') private readonly slotModel: Model<Slot>,
+    @InjectModel('User') private readonly userModel: Model<User>,
+    @InjectModel('Patient')private readonly patientModel: Model<Patient>,
+    private readonly notificationsGateway:NotificationsGateway,
+
   ) {}
 
   private getTodayUTC(): Date {
@@ -18,7 +26,7 @@ export class SlotService {
   //to create multiple slots 
   async createMultipleSlots(doctorId: string, dtos: CreateSlotDto[]): Promise<Slot[]> {
     const slots = dtos.map(dto => {
-      // Convert local IST input to actual UTC date object
+      // Convert local IST input to UTC date object
       const localDateTime = moment.tz(
         `${dto.date} ${dto.startTime}`,
         'YYYY-MM-DD HH:mm',
@@ -102,6 +110,28 @@ export class SlotService {
     slot.status = 'booked';
     slot.userId = userId;
 
+    const saved = await slot.save();
+
+const doctor = await this.userModel.findById(slot.doctorId);
+const patient = await this.patientModel.findById(userId);
+
+
+//  Emit real-time event to doctor
+this.notificationsGateway.emitToDoctor(
+  slot.doctorId,
+  'appointmentBooked',
+  {
+
+  date: saved.date,                    // UTC datetime
+  doctorName: doctor?.name || 'Doctor',
+  patientName: patient?.name || 'Patient',
+    /*slotId: saved._id,
+    doctorId: slot.doctorId,
+    userId,
+    date: saved.date,*/
+  },
+);
+
     return await slot.save();
   }
 
@@ -114,7 +144,19 @@ export class SlotService {
 
     slot.status = 'available';
     slot.userId = null;
+const saved = await slot.save();
 
+//  Emit cancellation event
+this.notificationsGateway.emitToDoctor(
+  slot.doctorId,
+  'appointmentCancelled',
+  {
+    slotId: saved._id,
+    doctorId: slot.doctorId,
+    userId,
+    date: saved.date,
+  },
+);
     return await slot.save();
   }
 

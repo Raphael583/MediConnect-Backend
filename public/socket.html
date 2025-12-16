@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doctor Real-Time Listener</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+  <h2>Doctor Real-Time Notifications</h2>
+
+  <p>Open your browser console to see events! (Right-click → Inspect → Console)</p>
+
+  <!-- ADDED: UI container for live notifications -->
+  <h3>Live Appointments</h3>
+  <ul id="notifications" style="list-style:none; padding:0;"></ul>
+
+  <script>
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InJhcGhhZWxAZ21haWwuY29tIiwidXNlclR5cGUiOiJkb2N0b3IiLCJob3NwaXRhbElkIjoiNjgyNmQ5NmNiZGY3YjUxZDBiMjU3OGEzIiwiZG9jdG9ySWQiOiI2ODI2ZTg2NWE4MzBjMDY2ZDNiM2YxZGEiLCJpYXQiOjE3NjU4Njc2MjIsImV4cCI6MTc2NTg3MTIyMn0.wZ2CR9EqiCbcgPe0trElNb4-OwCB8dnD07zw-94OUuc";
+
+    // Connect to backend Socket.IO server
+    const socket = io("http://localhost:3000", {
+      auth: { token }
+    });
+
+    // When socket connects
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+    });
+
+    // UPDATED: Slot booked event (console + UI)
+    socket.on("appointmentBooked", (data) => {
+      console.log("Slot Booked:", data);
+
+      const list = document.getElementById("notifications");
+
+      // Convert UTC date to local date & time
+      const dateObj = new Date(data.date);
+      const formattedDate = dateObj.toLocaleDateString("en-IN");
+      const formattedTime = dateObj.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      // Create UI card
+      const item = document.createElement("li");
+      item.style.border = "1px solid #ccc";
+      item.style.padding = "12px";
+      item.style.marginBottom = "10px";
+      item.style.borderRadius = "6px";
+      item.style.background = "#f9f9f9";
+
+      item.innerHTML = `
+        <strong>New Appointment Booked</strong><br/>
+        <b>Doctor:</b> ${data.doctorName}<br/>
+        <b>Patient:</b> ${data.patientName}<br/>
+        <b>Date:</b> ${formattedDate}<br/>
+        <b>Time:</b> ${formattedTime}
+      `;
+
+      // Show latest booking on top
+      list.prepend(item);
+    });
+
+    // Slot cancelled event (kept as-is)
+    socket.on("appointmentCancelled", (data) => {
+      console.log("Slot Cancelled:", data);
+    });
+
+    // When socket disconnects
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
+  </script>
+</body>
+</html>

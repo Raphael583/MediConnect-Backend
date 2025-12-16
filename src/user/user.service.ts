@@ -88,6 +88,7 @@
     email: user.email,
     userType: user.userType,
     hospitalId: user.hospitalId,
+    doctorId:user._id,
   };
 
   const token = this.jwtService.sign(payload);
